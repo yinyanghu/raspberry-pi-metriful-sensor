@@ -11,7 +11,10 @@ DEFAULT_SOUND_INT_PIN = 8
 DEFAULT_READY_PIN = 11
 RAW_DATA_CATEGORY = {
     "air": (AIR_DATA_READ, AIR_DATA_BYTES),
-    "air_quality": (AIR_QUALITY_READ, AIR_QUALITY_DATA_BYTES),
+    "air_quality": (AIR_QUALITY_DATA_READ, AIR_QUALITY_DATA_BYTES),
+    "light": (LIGHT_DATA_READ, LIGHT_DATA_BYTES),
+    "sound": (SOUND_DATA_READ, SOUND_DATA_BYTES),
+    "particle": (PARTICLE_DATA_READ, PARTICLE_DATA_BYTES),
 }
 
 
@@ -62,6 +65,13 @@ class MetrifulMS430:
             "b_voc": self.get_b_voc(raw_data),
         }
 
+    def get_light_data(self):
+        raw_data = self.get_raw_data("light")
+        return {
+            "illumination'": self.get_illumination(raw_data),
+            "white": self.get_white(raw_data),
+        }
+
     def get_temperature(self, raw_data):
         t = (raw_data[0] & TEMPERATURE_VALUE_MASK) + \
             (float(raw_data[1]) / 10.0)
@@ -87,6 +97,12 @@ class MetrifulMS430:
 
     def get_aqi_accuracy(self, raw_data):
         return raw_data[9]
+
+    def get_illumination(self, raw_data):
+        return raw_data[0] + (raw_data[1] << 8) + float(raw_data[2]) / 100.0
+
+    def get_white(self, raw_data):
+        return raw_data[3] + (raw_data[4] << 8)
 
 
 m = MetrifulMS430(DEFAULT_LIGHT_INT_PIN,
