@@ -7,9 +7,6 @@ from .constant import *
 I2C_BUS_NUMBER = 1
 WAIT_READY = 0.05
 WAIT_RESET = 0.005
-DEFAULT_LIGHT_INT_PIN = 7
-DEFAULT_SOUND_INT_PIN = 8
-DEFAULT_READY_PIN = 11
 RAW_DATA_CATEGORY = {
     "air": (AIR_DATA_READ, AIR_DATA_BYTES),
     "air_quality": (AIR_QUALITY_DATA_READ, AIR_QUALITY_DATA_BYTES),
@@ -95,6 +92,33 @@ class MetrifulMS430:
             "white": self.get_white(raw_data),
         }
 
+    def get_sound_data(self):
+        raw_data = self.get_raw_data("sound")
+        return {
+            "spl": self.get_spl(raw_data),
+            "spl_bands": self.get_spl_bands(raw_data),
+            "peak_amp": self.get_peak_amp(raw_data),
+            "stable": self.get_stable(raw_data),
+        }
+
+    def get_spl(self, raw_data):
+        return raw_data[0] + float(raw_data[1]) / 10.0
+
+    def get_spl_bands(self, raw_data):
+        sql_bands = []
+        for i in range(SOUND_FREQ_BANDS):
+            s = raw_data[2 + i] + \
+                float(raw_data[2 + i + SOUND_FREQ_BANDS]) / 10.0
+            sql_bands.append(s)
+        return sql_bands
+
+    def get_peak_amp(self, raw_data):
+        i = 2 + 2 * SOUND_FREQ_BANDS
+        return raw_data[i] + (raw_data[i + 1] << 8) + float(raw_data[i + 2]) / 100.0
+
+    def get_stable(self, raw_data):
+        return raw_data[5 + 2 * SOUND_FREQ_BANDS]
+
     def get_temperature(self, raw_data):
         t = (raw_data[0] & TEMPERATURE_VALUE_MASK) + \
             (float(raw_data[1]) / 10.0)
@@ -126,13 +150,3 @@ class MetrifulMS430:
 
     def get_white(self, raw_data):
         return raw_data[3] + (raw_data[4] << 8)
-
-
-m = MetrifulMS430(DEFAULT_LIGHT_INT_PIN,
-                  DEFAULT_SOUND_INT_PIN, DEFAULT_READY_PIN)
-m.on_demand_measure_mode()
-m.detect_and_wait()
-print(m.get_air_data())
-print(m.get_light_data())
-
-GPIO.cleanup()
