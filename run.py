@@ -1,4 +1,5 @@
 import RPi.GPIO as GPIO
+from time import sleep
 from raspberry_pi_metriful_sensor import MetrifulMS430
 
 DEFAULT_LIGHT_INT_PIN = 7
@@ -8,6 +9,7 @@ DEFAULT_READY_PIN = 11
 m = MetrifulMS430(DEFAULT_LIGHT_INT_PIN,
                   DEFAULT_SOUND_INT_PIN, DEFAULT_READY_PIN)
 m.setup_particle_sensor()
+sleep(4)
 m.on_demand_measure_mode()
 m.detect_and_wait()
 print(m.get_air_data())
