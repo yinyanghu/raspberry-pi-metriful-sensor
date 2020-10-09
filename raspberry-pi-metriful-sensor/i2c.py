@@ -6,6 +6,7 @@ from constant import *
 
 I2C_BUS_NUMBER = 1
 WAIT_INIT = 0.05
+WAIT_RESET = 0.005
 DEFAULT_LIGHT_INT_PIN = 7
 DEFAULT_SOUND_INT_PIN = 8
 DEFAULT_READY_PIN = 11
@@ -30,16 +31,29 @@ class MetrifulMS430:
         GPIO.setup(sound_int_pin, GPIO.IN)
 
         self.i2c_bus = smbus.SMBus(I2C_BUS_NUMBER)
-        self.init_and_wait()
-        self.i2c_bus.write_byte(I2C_ADDR_7BIT_SB_OPEN, RESET_CMD)
-        self.init_and_wait()
+        self.wait_ready()
+
+        self.reset()
         GPIO.add_event_detect(ready_pin, GPIO.FALLING)
 
-    def init_and_wait(self):
+    def reset(self):
+        self.i2c_bus.write_byte(I2C_ADDR_7BIT_SB_OPEN, RESET_CMD)
+        sleep(WAIT_RESET)
+        self.wait_ready()
+
+    def on_demand_mode(self):
+        self.i2c_bus.write_byte(I2C_ADDR_7BIT_SB_OPEN, ON_DEMAND_MEASURE_CMD)
+
+    def wait_ready(self):
         while (GPIO.input(self.ready_pin) == 1):
             sleep(WAIT_INIT)
 
+    def detect_and_wait(self):
+        while (not GPIO.event_detected(self.ready_pin)):
+            sleep(WAIT_INIT)
+
     def get_raw_data(self, key):
+        self.detect_and_wait()
         category, data_bytes = RAW_DATA_CATEGORY[key]
         raw_data = self.i2c_bus.read_i2c_block_data(
             I2C_ADDR_7BIT_SB_OPEN, category, data_bytes)
@@ -53,7 +67,7 @@ class MetrifulMS430:
             "temperature": self.get_temperature(raw_data),
             "pressure": self.get_pressure(raw_data),
             "humidity": self.get_humidity(raw_data),
-            "gas_sensor_resistance": self.gas_sensor_resistance(raw_data),
+            "gas_sensor_resistance": self.get_gas_sensor_resistance(raw_data),
         }
 
     def get_air_quality_data(self):
@@ -107,3 +121,7 @@ class MetrifulMS430:
 
 m = MetrifulMS430(DEFAULT_LIGHT_INT_PIN,
                   DEFAULT_SOUND_INT_PIN, DEFAULT_READY_PIN)
+m.on_demand_mode()
+print(m.get_air_data())
+
+GPIO.cleanup()
