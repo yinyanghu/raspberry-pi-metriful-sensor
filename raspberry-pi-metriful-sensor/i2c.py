@@ -2,7 +2,7 @@ from time import sleep
 
 import RPi.GPIO as GPIO
 import smbus
-from constant import *
+from .constant import *
 
 I2C_BUS_NUMBER = 1
 WAIT_READY = 0.05
@@ -16,6 +16,11 @@ RAW_DATA_CATEGORY = {
     "light": (LIGHT_DATA_READ, LIGHT_DATA_BYTES),
     "sound": (SOUND_DATA_READ, SOUND_DATA_BYTES),
     "particle": (PARTICLE_DATA_READ, PARTICLE_DATA_BYTES),
+}
+CYCLE_PERIOD = {
+    "3s": CYCLE_PERIOD_3_S,
+    "100s": CYCLE_PERIOD_100_S,
+    "300s": CYCLE_PERIOD_300_S,
 }
 
 
@@ -41,15 +46,20 @@ class MetrifulMS430:
         sleep(WAIT_RESET)
         self.wait_ready()
 
-    def on_demand_mode(self):
+    def on_demand_measure_mode(self):
         self.i2c_bus.write_byte(I2C_ADDR_7BIT_SB_OPEN, ON_DEMAND_MEASURE_CMD)
 
+    def cycle_mode(self, cycle):
+        self.i2c_bus.write_i2c_block_data(
+            I2C_ADDR_7BIT_SB_OPEN, CYCLE_TIME_PERIOD_REG, [CYCLE_PERIOD[cycle]])
+        self.i2c_bus.write_byte(I2C_ADDR_7BIT_SB_OPEN, CYCLE_MODE_CMD)
+
     def wait_ready(self):
-        while (GPIO.input(self.ready_pin) == 1):
+        while GPIO.input(self.ready_pin) == 1:
             sleep(WAIT_READY)
 
     def detect_and_wait(self):
-        while (not GPIO.event_detected(self.ready_pin)):
+        while not GPIO.event_detected(self.ready_pin):
             sleep(WAIT_READY)
 
     def get_raw_data(self, key):
@@ -120,7 +130,7 @@ class MetrifulMS430:
 
 m = MetrifulMS430(DEFAULT_LIGHT_INT_PIN,
                   DEFAULT_SOUND_INT_PIN, DEFAULT_READY_PIN)
-m.on_demand_mode()
+m.on_demand_measure_mode()
 m.detect_and_wait()
 print(m.get_air_data())
 print(m.get_light_data())
