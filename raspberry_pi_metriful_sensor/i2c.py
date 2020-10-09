@@ -1,9 +1,11 @@
+from enum import Enum
 from time import sleep
 
 import RPi.GPIO as GPIO
 import smbus
 from .constant import *
 
+I2C_ADDR = I2C_ADDR_7BIT_SB_OPEN
 I2C_BUS_NUMBER = 1
 WAIT_READY = 0.05
 WAIT_RESET = 0.005
@@ -21,11 +23,18 @@ CYCLE_PERIOD = {
 }
 
 
+class Mode(Enum):
+    STANDBY = 0
+    ON_DEMAND = 1
+    CYCLE = 2
+
+
 class MetrifulMS430:
     def __init__(self, light_int_pin, sound_int_pin, ready_pin):
         self.light_int_in = light_int_pin
         self.sound_int_pin = sound_int_pin
         self.ready_pin = ready_pin
+        self.mode = Mode.STANDBY
         GPIO.setwarnings(False)
         GPIO.setmode(GPIO.BOARD)
         GPIO.setup(ready_pin, GPIO.IN)
@@ -39,17 +48,23 @@ class MetrifulMS430:
         GPIO.add_event_detect(ready_pin, GPIO.FALLING)
 
     def reset(self):
-        self.i2c_bus.write_byte(I2C_ADDR_7BIT_SB_OPEN, RESET_CMD)
+        self.i2c_bus.write_byte(I2C_ADDR, RESET_CMD)
         sleep(WAIT_RESET)
         self.wait_ready()
 
+    def setup_particle_sensor(self):
+        self.i2c_bus.write_i2c_block_data(
+            I2C_ADDR, PARTICLE_SENSOR_SELECT_REG, [PARTICLE_SENSOR_PPD42])
+
     def on_demand_measure_mode(self):
-        self.i2c_bus.write_byte(I2C_ADDR_7BIT_SB_OPEN, ON_DEMAND_MEASURE_CMD)
+        self.i2c_bus.write_byte(I2C_ADDR, ON_DEMAND_MEASURE_CMD)
+        self.mode = Mode.ON_DEMAND
 
     def cycle_mode(self, cycle):
         self.i2c_bus.write_i2c_block_data(
-            I2C_ADDR_7BIT_SB_OPEN, CYCLE_TIME_PERIOD_REG, [CYCLE_PERIOD[cycle]])
-        self.i2c_bus.write_byte(I2C_ADDR_7BIT_SB_OPEN, CYCLE_MODE_CMD)
+            I2C_ADDR, CYCLE_TIME_PERIOD_REG, [CYCLE_PERIOD[cycle]])
+        self.i2c_bus.write_byte(I2C_ADDR, CYCLE_MODE_CMD)
+        self.mode = Mode.CYCLE
 
     def wait_ready(self):
         while GPIO.input(self.ready_pin) == 1:
@@ -62,7 +77,7 @@ class MetrifulMS430:
     def get_raw_data(self, key):
         category, data_bytes = RAW_DATA_CATEGORY[key]
         raw_data = self.i2c_bus.read_i2c_block_data(
-            I2C_ADDR_7BIT_SB_OPEN, category, data_bytes)
+            I2C_ADDR, category, data_bytes)
         if (len(raw_data) != data_bytes):
             raise Exception("Error on received data")
         return raw_data
@@ -77,6 +92,8 @@ class MetrifulMS430:
         }
 
     def get_air_quality_data(self):
+        if self.mode != Mode.CYCLE:
+            raise Exception("Not support air quality data in {} mode".format(self.mode.name))
         raw_data = self.get_raw_data("air_quality")
         return {
             "aqi": self.get_aqi(raw_data),
@@ -100,6 +117,23 @@ class MetrifulMS430:
             "peak_amp": self.get_peak_amp(raw_data),
             "stable": self.get_stable(raw_data),
         }
+
+    def get_particle_data(self):
+        raw_data = self.get_raw_data("particle")
+        return {
+            "duty_cycle_pc": self.get_duty_cycle_pc(raw_data),
+            "concentration": self.get_concentration(raw_data),
+            "valid": self.get_valid(raw_data),
+        }
+
+    def get_duty_cycle_pc(self, raw_data):
+        return raw_data[0] + float(raw_data[1]) / 100.0
+
+    def get_concentration(self, raw_data):
+        return raw_data[2] + (raw_data[3] << 8) + float(raw_data[4]) / 100.0
+
+    def get_valid(self, raw_data):
+        return raw_data[5] > 0
 
     def get_spl(self, raw_data):
         return raw_data[0] + float(raw_data[1]) / 10.0
