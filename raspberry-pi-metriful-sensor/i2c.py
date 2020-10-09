@@ -5,7 +5,7 @@ import smbus
 from constant import *
 
 I2C_BUS_NUMBER = 1
-WAIT_INIT = 0.05
+WAIT_READY = 0.05
 WAIT_RESET = 0.005
 DEFAULT_LIGHT_INT_PIN = 7
 DEFAULT_SOUND_INT_PIN = 8
@@ -46,14 +46,13 @@ class MetrifulMS430:
 
     def wait_ready(self):
         while (GPIO.input(self.ready_pin) == 1):
-            sleep(WAIT_INIT)
+            sleep(WAIT_READY)
 
     def detect_and_wait(self):
         while (not GPIO.event_detected(self.ready_pin)):
-            sleep(WAIT_INIT)
+            sleep(WAIT_READY)
 
     def get_raw_data(self, key):
-        self.detect_and_wait()
         category, data_bytes = RAW_DATA_CATEGORY[key]
         raw_data = self.i2c_bus.read_i2c_block_data(
             I2C_ADDR_7BIT_SB_OPEN, category, data_bytes)
@@ -122,6 +121,8 @@ class MetrifulMS430:
 m = MetrifulMS430(DEFAULT_LIGHT_INT_PIN,
                   DEFAULT_SOUND_INT_PIN, DEFAULT_READY_PIN)
 m.on_demand_mode()
+m.detect_and_wait()
 print(m.get_air_data())
+print(m.get_light_data())
 
 GPIO.cleanup()
