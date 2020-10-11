@@ -18,5 +18,15 @@ class Temperature(SensorData):
         super().__init__(value, "°C")
 
 
+class Humidity(SensorData):
+    def __init__(self, value):
+        super().__init__(value, "%")
+
+
+class Pressure(SensorData):
+    def __init__(self, value):
+        super().__init__(float(value) / 1000.0, "kPa")
+
+
 t = Temperature(10)
 print(t)
