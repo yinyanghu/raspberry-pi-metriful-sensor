@@ -3,7 +3,7 @@ from time import sleep
 
 import RPi.GPIO as GPIO
 import smbus
-from .constant import *
+from .code import *
 
 I2C_ADDR = I2C_ADDR_7BIT_SB_OPEN
 I2C_BUS_NUMBER = 1

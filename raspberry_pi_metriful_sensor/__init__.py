@@ -1,1 +1,1 @@
-from .i2c import MetrifulMS430
+from .ms430 import MetrifulMS430
