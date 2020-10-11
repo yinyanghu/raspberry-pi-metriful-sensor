@@ -2,11 +2,13 @@ import RPi.GPIO as GPIO
 from time import sleep
 from raspberry_pi_metriful_sensor import MetrifulMS430
 
+WAIT_INIT = 2
+
 
 def main():
     m = MetrifulMS430()
     m.setup_particle_sensor()
-    sleep(4)
+    sleep(WAIT_INIT)
     m.on_demand_measure_mode()
 
     m.detect_and_wait()
