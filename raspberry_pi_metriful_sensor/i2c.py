@@ -21,6 +21,9 @@ CYCLE_PERIOD = {
     "100s": CYCLE_PERIOD_100_S,
     "300s": CYCLE_PERIOD_300_S,
 }
+DEFAULT_LIGHT_INT_PIN = 7
+DEFAULT_SOUND_INT_PIN = 8
+DEFAULT_READY_PIN = 11
 
 
 class Mode(Enum):
@@ -30,7 +33,10 @@ class Mode(Enum):
 
 
 class MetrifulMS430:
-    def __init__(self, light_int_pin, sound_int_pin, ready_pin):
+    def __init__(self,
+                 light_int_pin=DEFAULT_LIGHT_INT_PIN,
+                 sound_int_pin=DEFAULT_SOUND_INT_PIN,
+                 ready_pin=DEFAULT_READY_PIN):
         self.light_int_in = light_int_pin
         self.sound_int_pin = sound_int_pin
         self.ready_pin = ready_pin
@@ -93,7 +99,8 @@ class MetrifulMS430:
 
     def get_air_quality_data(self):
         if self.mode != Mode.CYCLE:
-            raise Exception("Not support air quality data in {} mode".format(self.mode.name))
+            raise Exception(
+                "Not support air quality data in {} mode".format(self.mode.name))
         raw_data = self.get_raw_data("air_quality")
         return {
             "aqi": self.get_aqi(raw_data),
