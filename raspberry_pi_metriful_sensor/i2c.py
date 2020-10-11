@@ -66,7 +66,7 @@ class MetrifulMS430:
         self.i2c_bus.write_byte(I2C_ADDR, ON_DEMAND_MEASURE_CMD)
         self.mode = Mode.ON_DEMAND
 
-    def cycle_mode(self, cycle):
+    def cycle_mode(self, cycle="3s"):
         self.i2c_bus.write_i2c_block_data(
             I2C_ADDR, CYCLE_TIME_PERIOD_REG, [CYCLE_PERIOD[cycle]])
         self.i2c_bus.write_byte(I2C_ADDR, CYCLE_MODE_CMD)
